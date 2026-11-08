@@ -2,25 +2,30 @@ name = "s3-proxy"
 main = "src/worker.js"
 compatibility_date = "2025-06-01"
 
+# 所有配置都在 Cloudflare 面板里设置：Workers & Pages → s3-proxy → Settings → Variables and Secrets
+# keep_vars = true：部署时不覆盖、不删除面板里设置的变量
+keep_vars = true
+
 # 必须绑定自定义域名：*.workers.dev 上 Cache API 不生效，等于没有缓存加速
+# 可以在面板 Settings → Domains & Routes 里加，也可以在这里写：
 # routes = [{ pattern = "cdn.example.com", custom_domain = true }]
 
-[vars]
-S3_ENDPOINT = "https://s3.example.com"   # S3 接口地址（必须是域名，Workers 不能直连 IP）
-S3_BUCKET = "my-bucket"
-S3_REGION = "us-east-1"                  # MinIO/大多数兼容存储填 us-east-1；R2 填 auto
-PATH_STYLE = "true"                      # true: endpoint/bucket/key   false: bucket.endpoint/key
-PATH_PREFIX = ""                         # 只暴露桶内某个目录，例如 "public/"
-CACHE_TTL = "86400"                      # 边缘缓存秒数，0 = 不缓存
-BROWSER_TTL = "3600"                     # 浏览器缓存秒数，0 = no-store
-CACHE_MAX_BYTES = "104857600"            # 超过此大小的文件不进缓存（100MB）
-WARM_ON_RANGE = "true"                   # 视频等分段请求未命中时，后台拉整个文件进缓存
-CORS_ORIGINS = "*"                       # 逗号分隔，如 "https://a.com,https://b.com"
-DEBUG = "false"                          # true 时把源站错误打到日志（wrangler tail）
-
-# 以下用 secret 设置，不要写在这里：
-#   wrangler secret put S3_ACCESS_KEY_ID
-#   wrangler secret put S3_SECRET_ACCESS_KEY
-#   wrangler secret put ACCESS_TOKEN      # 可选：?token=xxx 或 Authorization: Bearer xxx
-#   wrangler secret put SIGN_SECRET       # 可选：限时签名链接
-# 两个都不设 = 任何人都能读（公开加速）
+# ---------------- 面板变量一览 ----------------
+# 必填
+#   S3_ENDPOINT           Text    S3 接口地址，如 https://s3.example.com（必须是域名）
+#   S3_BUCKET             Text    桶名
+#   S3_ACCESS_KEY_ID      Secret  访问密钥 ID
+#   S3_SECRET_ACCESS_KEY  Secret  访问密钥
+# 可选（括号内为默认值）
+#   S3_REGION             Text    (us-east-1)  R2 填 auto
+#   PATH_STYLE            Text    (true)       true: endpoint/bucket/key  false: bucket.endpoint/key
+#   PATH_PREFIX           Text    ()           只暴露桶内某个目录，如 public/
+#   CACHE_TTL             Text    (86400)      边缘缓存秒数，0 = 不缓存
+#   BROWSER_TTL           Text    (3600)       浏览器缓存秒数，0 = no-store
+#   CACHE_MAX_BYTES       Text    (104857600)  超过此大小不进缓存
+#   WARM_ON_RANGE         Text    (true)       分段请求未命中时后台拉整个文件进缓存
+#   CORS_ORIGINS          Text    (*)          逗号分隔的允许来源
+#   DEBUG                 Text    (false)      true 时把源站错误打到日志
+#   ACCESS_TOKEN          Secret  ()           访问口令：?token=xxx 或 Authorization: Bearer xxx
+#   SIGN_SECRET           Secret  ()           限时签名链接密钥
+# ACCESS_TOKEN 和 SIGN_SECRET 都不设 = 公开访问

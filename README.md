@@ -7,16 +7,29 @@ Worker 用 SigV4 签名回源，桶保持私有；文件缓存在 Cloudflare 边
 
 ```bash
 npm i -g wrangler && wrangler login
-# 1. 编辑 wrangler.toml：S3_ENDPOINT / S3_BUCKET / S3_REGION / PATH_STYLE，并打开 routes 绑定自定义域名
-# 2. 设置密钥
-wrangler secret put S3_ACCESS_KEY_ID
-wrangler secret put S3_SECRET_ACCESS_KEY
-# 3. 可选：访问控制（都不设 = 公开）
-wrangler secret put ACCESS_TOKEN   # 访问时带 ?token=xxx 或 Authorization: Bearer xxx
-wrangler secret put SIGN_SECRET    # 限时链接，用 scripts/sign-url.mjs 生成
-# 4. 发布
 wrangler deploy
 ```
+
+也可以不装 wrangler：在 Cloudflare 面板 Workers & Pages → Create → Import a repository，连接这个 GitHub 仓库，以后每次 push 自动部署。
+
+部署后在面板 **Workers & Pages → s3-proxy → Settings** 里配置：
+
+1. **Variables and Secrets** 添加变量（完整列表和默认值见 `wrangler.toml` 注释）：
+
+   | 变量 | 类型 | 说明 |
+   |---|---|---|
+   | `S3_ENDPOINT` | Text | S3 接口地址，如 `https://s3.example.com` |
+   | `S3_BUCKET` | Text | 桶名 |
+   | `S3_ACCESS_KEY_ID` | Secret | 访问密钥 ID |
+   | `S3_SECRET_ACCESS_KEY` | Secret | 访问密钥 |
+   | `S3_REGION` | Text | 可选，默认 `us-east-1`，R2 填 `auto` |
+   | `ACCESS_TOKEN` | Secret | 可选，访问口令 |
+   | `SIGN_SECRET` | Secret | 可选，限时签名链接密钥 |
+
+   密钥类一定选 **Secret**（加密保存，保存后面板里看不到明文）。
+2. **Domains & Routes** 绑定自定义域名。
+
+`wrangler.toml` 里设了 `keep_vars = true`，重新部署不会覆盖面板里的变量。
 
 访问：`https://cdn.example.com/<对象key>`，响应头 `X-Cache: HIT/MISS` 表示是否命中缓存。
 
