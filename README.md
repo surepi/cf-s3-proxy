@@ -20,8 +20,9 @@ wrangler deploy
    |---|---|---|
    | `S3_ENDPOINT` | Text | S3 接口地址，如 `https://s3.example.com` |
    | `S3_BUCKET` | Text | 桶名 |
-   | `S3_ACCESS_KEY_ID` | Secret | 访问密钥 ID |
-   | `S3_SECRET_ACCESS_KEY` | Secret | 访问密钥 |
+   | `S3_ACCESS_KEY_ID` | Secret | 访问密钥 ID（桶是公开读的就不填） |
+   | `S3_SECRET_ACCESS_KEY` | Secret | 访问密钥（桶是公开读的就不填） |
+   | `ALLOWED_PREFIXES` | Text | 可选，只允许访问这些目录，如 `uploads/` |
    | `S3_REGION` | Text | 可选，默认 `us-east-1`，R2 填 `auto` |
    | `ACCESS_TOKEN` | Secret | 可选，访问口令 |
    | `SIGN_SECRET` | Secret | 可选，限时签名链接密钥 |

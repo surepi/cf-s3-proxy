@@ -33,6 +33,11 @@ globalThis.fetch = async (url, init) => {
   const u = new URL(url), h = init.headers;
   // 独立重算签名
   const auth = h.get('authorization');
+  if (!auth) {
+    const k = decodeURIComponent(u.pathname.slice(1));
+    if (!k.startsWith('bkt/dir/') || objects[k] === undefined) return new Response('<Error><Code>AccessDenied</Code><Message>Access Denied.</Message></Error>', { status: 403 });
+    return new Response(init.method === 'HEAD' ? null : objects[k], { status: 200, headers: { 'content-type': 'text/plain', 'content-length': String(new TextEncoder().encode(objects[k]).length) } });
+  }
   const signedHeaders = /SignedHeaders=([^,]+)/.exec(auth)[1].split(';');
   const canon = [init.method, u.pathname, '', signedHeaders.map((k) => `${k}:${k === 'host' ? u.host : h.get(k)}\n`).join(''),
     signedHeaders.join(';'), h.get('x-amz-content-sha256')].join('\n');
@@ -113,4 +118,14 @@ r = await call('/dir/big.bin'); assert.equal(r.headers.get('content-disposition'
 r = await call('/dir/big.bin'); assert.equal(r.headers.get('x-cache'), 'HIT'); assert.equal(r.headers.get('content-disposition'), null);
 r = await call('/dir/big.bin', { env: { KEEP_CONTENT_DISPOSITION: 'true' } }); assert.equal(r.headers.get('content-disposition'), 'attachment');
 ok('默认去掉 Content-Disposition（含缓存命中），开关可保留');
+store.clear();
+const anon = { S3_ACCESS_KEY_ID: '', S3_SECRET_ACCESS_KEY: '' };
+r = await call('/dir/a%20b(1).txt', { env: anon }); assert.equal(r.status, 200); assert.equal(await r.text(), 'hello world\n');
+r = await call('/%E4%B8%AD%E6%96%87/%E6%96%87%E4%BB%B6.txt', { env: anon }); assert.equal(r.status, 404); ok('不填密钥时匿名读');
+r = await call('/x', { env: { S3_ACCESS_KEY_ID: 'only-one', S3_SECRET_ACCESS_KEY: '' } }); assert.equal(r.status, 500); ok('只填一个密钥 -> 500');
+store.clear();
+const pre = { env: { ALLOWED_PREFIXES: 'dir/' } };
+assert.equal((await call('/dir/big.bin', pre)).status, 200);
+assert.equal((await call('/%E4%B8%AD%E6%96%87/%E6%96%87%E4%BB%B6.txt', pre)).status, 404);
+assert.equal((await call('/dirx/big.bin', pre)).status, 404); ok('ALLOWED_PREFIXES 限制目录');
 console.log('ALL PASS');

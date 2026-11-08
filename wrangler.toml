@@ -14,9 +14,11 @@ keep_vars = true
 # 必填
 #   S3_ENDPOINT           Text    S3 接口地址，如 https://s3.example.com（必须是域名）
 #   S3_BUCKET             Text    桶名
+# 私有桶必填（公开读的桶两个都不填，Worker 不签名直接读）
 #   S3_ACCESS_KEY_ID      Secret  访问密钥 ID
 #   S3_SECRET_ACCESS_KEY  Secret  访问密钥
 # 可选（括号内为默认值）
+#   ALLOWED_PREFIXES      Text    ()           只允许访问这些前缀，逗号分隔，如 uploads/  （URL 不变）
 #   S3_REGION             Text    (us-east-1)  R2 填 auto
 #   PATH_STYLE            Text    (true)       true: endpoint/bucket/key  false: bucket.endpoint/key
 #   PATH_PREFIX           Text    ()           只暴露桶内某个目录，如 public/

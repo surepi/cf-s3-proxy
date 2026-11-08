@@ -29,7 +29,9 @@ function loadConfig(rawEnv) {
   // Dashboard values often pick up stray spaces/newlines when pasted.
   const env = {};
   for (const [k, v] of Object.entries(rawEnv)) env[k] = typeof v === 'string' ? v.trim() : v;
-  const need = ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
+  // Access keys are optional: without them the bucket is read anonymously (public-read buckets).
+  const need = ['S3_ENDPOINT', 'S3_BUCKET'];
+  if (!!env.S3_ACCESS_KEY_ID !== !!env.S3_SECRET_ACCESS_KEY) need.push('S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY (set both or neither)');
   const missing = need.filter((k) => !env[k]);
   if (missing.length) throw new Error('missing ' + missing.join(', '));
 
@@ -45,8 +47,9 @@ function loadConfig(rawEnv) {
     region: env.S3_REGION || 'us-east-1',
     pathStyle: bool(env.PATH_STYLE, true),
     prefix,
-    accessKeyId: env.S3_ACCESS_KEY_ID,
-    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    accessKeyId: env.S3_ACCESS_KEY_ID || '',
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY || '',
+    allowedPrefixes: (env.ALLOWED_PREFIXES || '').split(',').map((s) => s.trim().replace(/^\/+/, '')).filter(Boolean),
     accessToken: env.ACCESS_TOKEN || '',
     signSecret: env.SIGN_SECRET || '',
     edgeTtl: num(env.CACHE_TTL, 86400),
@@ -84,6 +87,9 @@ async function handle(request, cfg, ctx) {
     return text(404, 'Not Found', cors);
   }
   key = cfg.prefix + key;
+  if (cfg.allowedPrefixes.length && !cfg.allowedPrefixes.some((p) => key.startsWith(p))) {
+    return text(404, 'Not Found', cors);
+  }
 
   const range = request.headers.get('Range');
   const cacheOn = cfg.edgeTtl > 0;
@@ -155,12 +161,14 @@ async function fetchOrigin(cfg, key, method, range) {
   }
   const headers = new Headers();
   if (range) headers.set('range', range);
-  await signS3Request({
-    method, host, path, headers,
-    region: cfg.region,
-    accessKeyId: cfg.accessKeyId,
-    secretAccessKey: cfg.secretAccessKey,
-  });
+  if (cfg.accessKeyId) {
+    await signS3Request({
+      method, host, path, headers,
+      region: cfg.region,
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    });
+  }
   return fetch(`${ep.protocol}//${host}${path}`, { method, headers, redirect: 'manual' });
 }
 
