@@ -6,7 +6,7 @@ compatibility_date = "2025-06-01"
 # keep_vars = true：部署时不覆盖、不删除面板里设置的变量
 keep_vars = true
 
-# 必须绑定自定义域名：*.workers.dev 上 Cache API 不生效，等于没有缓存加速
+# 建议绑定自定义域名（*.workers.dev 实测也能缓存，但部分地区访问不稳定）
 # 可以在面板 Settings → Domains & Routes 里加，也可以在这里写：
 # routes = [{ pattern = "cdn.example.com", custom_domain = true }]
 

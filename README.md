@@ -40,7 +40,7 @@ SIGN_SECRET=xxx node scripts/sign-url.mjs https://cdn.example.com /videos/a.mp4 
 
 ## 注意
 
-- **必须用自定义域名**（域名托管在 Cloudflare）。`*.workers.dev` 上 Cache API 不生效。
+- 建议绑定自定义域名（托管在 Cloudflare）。`*.workers.dev` 实测也能缓存，但该域名在部分地区访问不稳定。
 - `S3_ENDPOINT` 必须是域名，Workers 不能直连 IP。建议用 443 端口；MinIO 默认 9000 端口可能被 Workers 限制，最好前面套一层 Nginx 反代到 443。
 - 缓存按 Cloudflare 节点分别存储，每个节点第一次访问都会回源。
 - 后台写缓存受 `waitUntil` 约 30 秒时限，源站慢时大文件可能来不及缓存；可调小 `CACHE_MAX_BYTES`。
