@@ -25,7 +25,10 @@ export default {
   },
 };
 
-function loadConfig(env) {
+function loadConfig(rawEnv) {
+  // Dashboard values often pick up stray spaces/newlines when pasted.
+  const env = {};
+  for (const [k, v] of Object.entries(rawEnv)) env[k] = typeof v === 'string' ? v.trim() : v;
   const need = ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
   const missing = need.filter((k) => !env[k]);
   if (missing.length) throw new Error('missing ' + missing.join(', '));
@@ -97,11 +100,18 @@ async function handle(request, cfg, ctx) {
   const origin = await fetchOrigin(cfg, key, request.method, range);
 
   if (!origin.ok) {
-    if (cfg.debug) console.log('origin', origin.status, await origin.clone().text());
     if (origin.status === 416) return finalize(origin, request.method, cors, cfg, 'MISS');
     // S3 returns 403 for missing keys when ListBucket isn't granted; don't leak details.
     const status = origin.status === 403 || origin.status === 404 ? 404 : 502;
-    return text(status, status === 404 ? 'Not Found' : 'Bad Gateway', cors);
+    let msg = status === 404 ? 'Not Found' : 'Bad Gateway';
+    if (cfg.debug) {
+      const body = request.method === 'HEAD' ? '' : await origin.text();
+      console.log('origin', origin.status, body);
+      const code = /<Code>([^<]*)<\/Code>/.exec(body)?.[1] || '';
+      const m = /<Message>([^<]*)<\/Message>/.exec(body)?.[1] || '';
+      msg += `\n[debug] origin ${origin.status} ${code} ${m}\n[debug] bucket=${cfg.bucket} region=${cfg.region} endpoint=${cfg.endpoint.origin}${cfg.endpoint.pathname} pathStyle=${cfg.pathStyle} key=${key}`;
+    }
+    return text(status, msg, cors);
   }
 
   if (cacheOn && request.method === 'GET') {

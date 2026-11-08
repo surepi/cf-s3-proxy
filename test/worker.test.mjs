@@ -42,7 +42,7 @@ globalThis.fetch = async (url, init) => {
   if (!auth.includes(`Credential=${AK}/${scope}`) || /Signature=(\w+)/.exec(auth)[1] !== hmac(key, sts).toString('hex'))
     return new Response('<Error>SignatureDoesNotMatch</Error>', { status: 403 });
   const obj = objects[decodeURIComponent(u.pathname.slice(1))];
-  if (obj === undefined) return new Response('<Error>AccessDenied</Error>', { status: 403 });
+  if (obj === undefined) return new Response('<Error><Code>AccessDenied</Code><Message>Access Denied.</Message></Error>', { status: 403 });
   const body = new TextEncoder().encode(obj);
   const base = { 'content-type': 'application/octet-stream', etag: '"abc"', 'x-amz-request-id': 'SECRET' };
   const range = h.get('range');
@@ -103,4 +103,9 @@ r = await call('/dir/big.bin', { headers: { Origin: 'https://b.com' }, env: { CO
 assert.equal(r.headers.get('access-control-allow-origin'), 'https://b.com'); ok('CORS 白名单');
 
 r = await call('/x', { env: { S3_BUCKET: '' } }); assert.equal(r.status, 500); ok('缺配置 -> 500');
+store.clear();
+r = await call('/dir/a%20b(1).txt', { env: { S3_ACCESS_KEY_ID: ' testak\n', S3_SECRET_ACCESS_KEY: 'testsecret \n' } });
+assert.equal(r.status, 200); ok('变量首尾空格/换行自动去掉');
+r = await call('/nope.txt', { env: { DEBUG: 'true' } }); const dbg = await r.text();
+assert.equal(r.status, 404); assert.ok(dbg.includes('[debug] origin 403 AccessDenied') && !dbg.includes(SK)); ok('DEBUG 显示源站错误码且不含密钥');
 console.log('ALL PASS');
