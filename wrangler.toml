@@ -26,6 +26,7 @@ keep_vars = true
 #   WARM_ON_RANGE         Text    (true)       分段请求未命中时后台拉整个文件进缓存
 #   CORS_ORIGINS          Text    (*)          逗号分隔的允许来源
 #   DEBUG                 Text    (false)      true 时把源站错误打到日志
+#   KEEP_CONTENT_DISPOSITION Text (false)   true 时保留对象的 Content-Disposition（attachment 会让浏览器下载而不是显示）
 #   ACCESS_TOKEN          Secret  ()           访问口令：?token=xxx 或 Authorization: Bearer xxx
 #   SIGN_SECRET           Secret  ()           限时签名链接密钥
 # ACCESS_TOKEN 和 SIGN_SECRET 都不设 = 公开访问

@@ -55,6 +55,7 @@ function loadConfig(rawEnv) {
     warmOnRange: bool(env.WARM_ON_RANGE, true),
     corsOrigins: (env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean),
     debug: bool(env.DEBUG, false),
+    keepContentDisposition: bool(env.KEEP_CONTENT_DISPOSITION, false),
   };
 }
 
@@ -177,6 +178,8 @@ function toCacheable(resp, cfg) {
 function finalize(resp, method, cors, cfg, cacheStatus) {
   const h = new Headers();
   for (const k of PASS_HEADERS) {
+    // Objects migrated from other clouds often carry "attachment", which forces a download in browsers.
+    if (k === 'content-disposition' && !cfg.keepContentDisposition) continue;
     const v = resp.headers.get(k);
     if (v) h.set(k, v);
   }

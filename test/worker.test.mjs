@@ -44,7 +44,7 @@ globalThis.fetch = async (url, init) => {
   const obj = objects[decodeURIComponent(u.pathname.slice(1))];
   if (obj === undefined) return new Response('<Error><Code>AccessDenied</Code><Message>Access Denied.</Message></Error>', { status: 403 });
   const body = new TextEncoder().encode(obj);
-  const base = { 'content-type': 'application/octet-stream', etag: '"abc"', 'x-amz-request-id': 'SECRET' };
+  const base = { 'content-type': 'application/octet-stream', etag: '"abc"', 'x-amz-request-id': 'SECRET', 'content-disposition': 'attachment' };
   const range = h.get('range');
   if (range) {
     const [, s, e] = /bytes=(\d+)-(\d*)/.exec(range); const end = e ? Number(e) : body.length - 1;
@@ -108,4 +108,9 @@ r = await call('/dir/a%20b(1).txt', { env: { S3_ACCESS_KEY_ID: ' testak\n', S3_S
 assert.equal(r.status, 200); ok('变量首尾空格/换行自动去掉');
 r = await call('/nope.txt', { env: { DEBUG: 'true' } }); const dbg = await r.text();
 assert.equal(r.status, 404); assert.ok(dbg.includes('[debug] origin 403 AccessDenied') && !dbg.includes(SK)); ok('DEBUG 显示源站错误码且不含密钥');
+store.clear();
+r = await call('/dir/big.bin'); assert.equal(r.headers.get('content-disposition'), null);
+r = await call('/dir/big.bin'); assert.equal(r.headers.get('x-cache'), 'HIT'); assert.equal(r.headers.get('content-disposition'), null);
+r = await call('/dir/big.bin', { env: { KEEP_CONTENT_DISPOSITION: 'true' } }); assert.equal(r.headers.get('content-disposition'), 'attachment');
+ok('默认去掉 Content-Disposition（含缓存命中），开关可保留');
 console.log('ALL PASS');
